@@ -1,0 +1,14 @@
+package com.enterprise.flashsale.order.domain.event;
+
+import java.time.Instant;
+import java.util.UUID;
+
+public interface DomainEvent {
+    UUID eventId();
+
+    Instant occurredOn();
+
+    String aggregateId();
+
+    String eventType();
+}
