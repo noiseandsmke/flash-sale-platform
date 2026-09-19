@@ -66,6 +66,10 @@ public class OutboxJpaEntity {
         return aggregateId;
     }
 
+    public String getEventType() {
+        return eventType;
+    }
+
     public String getPayload() {
         return payload;
     }

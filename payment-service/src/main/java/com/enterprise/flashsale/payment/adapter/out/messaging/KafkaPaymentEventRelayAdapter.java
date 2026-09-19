@@ -1,8 +1,10 @@
 package com.enterprise.flashsale.payment.adapter.out.messaging;
 
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -14,9 +16,14 @@ public class KafkaPaymentEventRelayAdapter {
         this.kafkaTemplate = kafkaTemplate;
     }
 
-    public void publish(String aggregateId, String payload) {
+    public void publish(String aggregateId, String eventType, String payload) {
         try {
-            kafkaTemplate.send(TOPIC_PAYMENT_EVENTS, aggregateId, payload).get(3, TimeUnit.SECONDS);
+            ProducerRecord<String, String> record =
+                    new ProducerRecord<>(TOPIC_PAYMENT_EVENTS, aggregateId, payload);
+            if (eventType != null) {
+                record.headers().add("eventType", eventType.getBytes(StandardCharsets.UTF_8));
+            }
+            kafkaTemplate.send(record).get(3, TimeUnit.SECONDS);
         } catch (Exception e) {
             throw new IllegalStateException("Failed to publish payment event to Kafka within timeout", e);
         }

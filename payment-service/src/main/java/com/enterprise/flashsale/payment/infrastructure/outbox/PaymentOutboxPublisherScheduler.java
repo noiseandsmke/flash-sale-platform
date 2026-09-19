@@ -28,7 +28,7 @@ public class PaymentOutboxPublisherScheduler {
         List<OutboxJpaEntity> pendingEvents = outboxRepository.findPendingEvents(PageRequest.of(0, 50));
 
         for (OutboxJpaEntity event : pendingEvents) {
-            kafkaPaymentRelayAdapter.publish(event.getAggregateId(), event.getPayload());
+            kafkaPaymentRelayAdapter.publish(event.getAggregateId(), event.getEventType(), event.getPayload());
             event.setStatus("PROCESSED");
             event.setProcessedAt(Instant.now());
             outboxRepository.save(event);
