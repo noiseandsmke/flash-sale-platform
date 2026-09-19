@@ -4,8 +4,11 @@ import com.enterprise.flashsale.reservation.application.port.out.TicketEventPubl
 import com.enterprise.flashsale.reservation.domain.event.TicketReservedEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
+
+import java.nio.charset.StandardCharsets;
 
 @Component
 public class KafkaTicketEventAdapter implements TicketEventPublisherPort {
@@ -24,9 +27,15 @@ public class KafkaTicketEventAdapter implements TicketEventPublisherPort {
         try {
             String partitionKey = event.aggregateId();
             String payload = objectMapper.writeValueAsString(event);
-            kafkaTemplate.send(TOPIC_TICKET_RESERVED, partitionKey, payload);
+            ProducerRecord<String, String> record =
+                    new ProducerRecord<>(TOPIC_TICKET_RESERVED, partitionKey, payload);
+            record.headers().add("eventType", event.eventType().getBytes(StandardCharsets.UTF_8));
+            record.headers().add("eventId", event.eventId().toString().getBytes(StandardCharsets.UTF_8));
+            kafkaTemplate.send(record).get(3, java.util.concurrent.TimeUnit.SECONDS);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to serialize TicketReservedEvent to JSON", e);
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to publish TicketReservedEvent to Kafka within timeout", e);
         }
     }
 }

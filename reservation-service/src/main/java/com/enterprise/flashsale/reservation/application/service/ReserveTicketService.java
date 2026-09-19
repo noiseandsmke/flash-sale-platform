@@ -43,7 +43,12 @@ public class ReserveTicketService implements ReserveTicketUseCase {
 
         TicketReservedEvent reservationEvent = ticket.reserve(command.userId(), RESERVATION_DURATION);
 
-        ticketEventPublisherPort.publish(reservationEvent);
+        try {
+            ticketEventPublisherPort.publish(reservationEvent);
+        } catch (Exception e) {
+            ticketInventoryPort.releaseStock(ticketId, command.userId());
+            throw new IllegalStateException("Failed to publish reservation event; stock reservation rolled back", e);
+        }
 
         return true;
     }
