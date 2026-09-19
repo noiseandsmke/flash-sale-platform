@@ -1,5 +1,6 @@
 package com.enterprise.flashsale.order.domain.model;
 
+import com.enterprise.flashsale.order.domain.event.OrderCancelledEvent;
 import com.enterprise.flashsale.order.domain.event.OrderCreatedEvent;
 
 import java.time.Instant;
@@ -52,9 +53,11 @@ public class Order {
         this.updatedAt = Instant.now();
     }
 
-    public void cancel() {
+    public OrderCancelledEvent cancel(String reason) {
         this.status = this.status.transitionTo(OrderStatus.CANCELLED);
         this.updatedAt = Instant.now();
+        List<Long> ticketIds = this.items.stream().map(OrderItem::ticketId).toList();
+        return OrderCancelledEvent.of(this.id.toString(), this.userId, ticketIds, reason);
     }
 
     private Money calculateTotal(List<OrderItem> items) {

@@ -8,9 +8,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 
-import java.time.Instant;
-import java.util.UUID;
-
 @Component
 public class PostgresOutboxAdapter implements OutboxPersistencePort {
     private final SpringDataOutboxRepository repository;
@@ -26,14 +23,14 @@ public class PostgresOutboxAdapter implements OutboxPersistencePort {
         try {
             String payload = objectMapper.writeValueAsString(event);
             OutboxJpaEntity entity = new OutboxJpaEntity(
-                    UUID.randomUUID().toString(),
+                    event.eventId().toString(),
                     "Payment",
                     event.aggregateId(),
                     event.eventType(),
                     payload,
                     "PENDING",
                     0,
-                    Instant.now());
+                    event.occurredOn());
             repository.save(entity);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to serialize domain event to JSON", e);

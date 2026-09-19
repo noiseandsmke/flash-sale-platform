@@ -11,7 +11,6 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 
 @Component
 public class PostgresOutboxAdapter implements OutboxPersistencePort {
@@ -28,14 +27,14 @@ public class PostgresOutboxAdapter implements OutboxPersistencePort {
         try {
             String payload = objectMapper.writeValueAsString(event);
             OutboxJpaEntity entity = new OutboxJpaEntity(
-                    UUID.randomUUID().toString(),
+                    event.eventId().toString(),
                     "Order",
                     event.aggregateId(),
                     event.eventType(),
                     payload,
                     "PENDING",
                     0,
-                    Instant.now());
+                    event.occurredOn());
             repository.save(entity);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to serialize domain event for outbox", e);
