@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -32,7 +33,10 @@ public class PaymentEventConsumer {
             topics = "payment-events",
             groupId = "order-payment-feedback-group",
             containerFactory = "kafkaListenerContainerFactory")
-    public void consume(String payload, Acknowledgment acknowledgment) {
+    public void consume(
+            String payload,
+            @Header(name = "eventType", required = false) String eventTypeHeader,
+            Acknowledgment acknowledgment) {
         try {
             JsonNode root = objectMapper.readTree(payload);
             if (root == null || !root.has("orderId")) {
@@ -44,17 +48,24 @@ public class PaymentEventConsumer {
             String orderIdStr = root.get("orderId").asText();
             OrderId orderId = OrderId.fromString(orderIdStr);
 
-            boolean isFailure = root.has("failureReason")
-                    || "PAYMENT_FAILED".equals(root.path("eventType").asText());
+            String eventType = (eventTypeHeader != null && !eventTypeHeader.isBlank())
+                    ? eventTypeHeader
+                    : root.path("eventType").asText();
 
             try {
-                if (isFailure) {
+                if ("PAYMENT_FAILED".equals(eventType)) {
                     String reason = root.has("failureReason")
                             ? root.get("failureReason").asText()
                             : "PAYMENT_FAILED";
                     cancelOrderUseCase.cancelOrder(orderId, reason);
-                } else {
+                } else if ("PAYMENT_PROCESSED".equals(eventType)) {
                     completeOrderUseCase.completeOrder(orderId);
+                } else {
+                    log.warn(
+                            "Unrecognized payment eventType '{}' for order {}. Payload: {}",
+                            eventType,
+                            orderIdStr,
+                            payload);
                 }
             } catch (InvalidOrderStateException e) {
                 log.warn(

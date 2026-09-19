@@ -25,7 +25,7 @@ public class OutboxEventPublisherScheduler {
     public void processOutboxEvents() {
         List<OutboxJpaEntity> pendingEvents = outboxPersistencePort.fetchPendingEvents(50);
         for (OutboxJpaEntity event : pendingEvents) {
-            orderEventPublisherPort.publish(event.getAggregateId(), event.getPayload());
+            orderEventPublisherPort.publish(event.getAggregateId(), event.getEventType(), event.getPayload());
             outboxPersistencePort.markAsProcessed(event);
         }
     }
