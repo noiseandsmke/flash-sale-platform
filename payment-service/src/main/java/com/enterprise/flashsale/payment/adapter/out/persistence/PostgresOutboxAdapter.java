@@ -6,7 +6,12 @@ import com.enterprise.flashsale.payment.application.port.out.OutboxPersistencePo
 import com.enterprise.flashsale.payment.domain.event.DomainEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.util.List;
 
 @Component
 public class PostgresOutboxAdapter implements OutboxPersistencePort {
@@ -35,5 +40,18 @@ public class PostgresOutboxAdapter implements OutboxPersistencePort {
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to serialize domain event to JSON", e);
         }
+    }
+
+    @Override
+    public List<OutboxJpaEntity> fetchPendingEvents(int batchSize) {
+        return repository.findPendingEvents(PageRequest.of(0, batchSize));
+    }
+
+    @Override
+    @Transactional
+    public void markAsProcessed(OutboxJpaEntity event) {
+        event.setStatus("PROCESSED");
+        event.setProcessedAt(Instant.now());
+        repository.save(event);
     }
 }
