@@ -9,6 +9,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 
 @Component
 public class KafkaTicketEventAdapter implements TicketEventPublisherPort {
@@ -27,11 +28,10 @@ public class KafkaTicketEventAdapter implements TicketEventPublisherPort {
         try {
             String partitionKey = event.aggregateId();
             String payload = objectMapper.writeValueAsString(event);
-            ProducerRecord<String, String> record =
-                    new ProducerRecord<>(TOPIC_TICKET_RESERVED, partitionKey, payload);
+            ProducerRecord<String, String> record = new ProducerRecord<>(TOPIC_TICKET_RESERVED, partitionKey, payload);
             record.headers().add("eventType", event.eventType().getBytes(StandardCharsets.UTF_8));
             record.headers().add("eventId", event.eventId().toString().getBytes(StandardCharsets.UTF_8));
-            kafkaTemplate.send(record).get(3, java.util.concurrent.TimeUnit.SECONDS);
+            kafkaTemplate.send(record).get(3, TimeUnit.SECONDS);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to serialize TicketReservedEvent to JSON", e);
         } catch (Exception e) {
