@@ -5,9 +5,6 @@ import com.enterprise.flashsale.order.application.port.out.OrderEventPublisherPo
 import com.enterprise.flashsale.order.application.port.out.OutboxPersistencePort;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Component
 public class OutboxEventPublisherScheduler {
@@ -21,10 +18,8 @@ public class OutboxEventPublisherScheduler {
     }
 
     @Scheduled(fixedDelay = 500)
-    @Transactional
     public void processOutboxEvents() {
-        List<OutboxJpaEntity> pendingEvents = outboxPersistencePort.fetchPendingEvents(50);
-        for (OutboxJpaEntity event : pendingEvents) {
+        for (OutboxJpaEntity event : outboxPersistencePort.fetchPendingEvents(50)) {
             orderEventPublisherPort.publish(event.getAggregateId(), event.getEventType(), event.getPayload());
             outboxPersistencePort.markAsProcessed(event);
         }
