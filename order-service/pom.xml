@@ -8,9 +8,12 @@
         <groupId>com.enterprise.flashsale</groupId>
         <artifactId>flash-sale-platform</artifactId>
         <version>1.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>order-service</artifactId>
+    <name>Flash Sale :: Order Service</name>
+    <description>Order management service with transactional outbox and saga participation</description>
 
     <dependencies>
         <dependency>
@@ -97,7 +100,6 @@
         <dependency>
             <groupId>com.tngtech.archunit</groupId>
             <artifactId>archunit-junit5</artifactId>
-            <version>1.3.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -107,14 +109,6 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <version>${spring.boot.version}</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>repackage</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>
