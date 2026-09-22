@@ -1,32 +1,5 @@
-server:
-  port: 8081
-
 spring:
   application:
     name: reservation-service
-  threads:
-    virtual:
-      enabled: true
-
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:redis_secure_password}
-
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    consumer:
-      group-id: reservation-cancellation-group
-      auto-offset-reset: earliest
-      enable-auto-commit: false
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus
-  metrics:
-    distribution:
-      percentiles-histogram:
-        http.server.requests: true
+  config:
+    import: "optional:configserver:http://${CONFIG_SERVER_HOST:localhost}:8888/"

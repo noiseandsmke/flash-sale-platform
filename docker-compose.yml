@@ -111,3 +111,117 @@ services:
       retries: 5
       start_period: 10s
     restart: unless-stopped
+
+  config-server:
+    build:
+      context: ./config-server
+      dockerfile: Dockerfile
+    container_name: flashsale-config-server
+    networks:
+      - flashsale-network
+    ports:
+      - "8888:8888"
+    environment:
+      CONFIG_GIT_URI: ${CONFIG_GIT_URI:-https://github.com/noiseandsmke/flash-sale-config.git}
+      CONFIG_GIT_DEFAULT_LABEL: ${CONFIG_GIT_DEFAULT_LABEL:-main}
+      CONFIG_GIT_USERNAME: ${CONFIG_GIT_USERNAME:-}
+      CONFIG_GIT_PASSWORD: ${CONFIG_GIT_PASSWORD:-}
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:8888/actuator/health | grep UP || exit 1" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  reservation-service:
+    build:
+      context: ./reservation-service
+      dockerfile: Dockerfile
+    container_name: flashsale-reservation-service
+    networks:
+      - flashsale-network
+    ports:
+      - "8081:8081"
+    environment:
+      CONFIG_SERVER_HOST: config-server
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: redis_secure_password
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      config-server:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health | grep UP || exit 1" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    container_name: flashsale-order-service
+    networks:
+      - flashsale-network
+    ports:
+      - "8082:8082"
+    environment:
+      CONFIG_SERVER_HOST: config-server
+      POSTGRES_HOST: postgres-order
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres_admin
+      POSTGRES_PASSWORD: admin_secure_password
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      config-server:
+        condition: service_healthy
+      postgres-order:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health | grep UP || exit 1" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  payment-service:
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile
+    container_name: flashsale-payment-service
+    networks:
+      - flashsale-network
+    ports:
+      - "8083:8083"
+    environment:
+      CONFIG_SERVER_HOST: config-server
+      POSTGRES_HOST: postgres-payment
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres_admin
+      POSTGRES_PASSWORD: admin_secure_password
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      config-server:
+        condition: service_healthy
+      postgres-payment:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health | grep UP || exit 1" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped

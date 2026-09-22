@@ -1,0 +1,26 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: config-server
+  cloud:
+    config:
+      server:
+        git:
+          uri: ${CONFIG_GIT_URI:https://github.com/noiseandsmke/flash-sale-config.git}
+          default-label: ${CONFIG_GIT_DEFAULT_LABEL:main}
+          clone-on-start: ${CONFIG_GIT_CLONE_ON_START:true}
+          timeout: ${CONFIG_GIT_TIMEOUT:5}
+          username: ${CONFIG_GIT_USERNAME:}
+          password: ${CONFIG_GIT_PASSWORD:}
+          skip-ssl-validation: ${CONFIG_GIT_SKIP_SSL:false}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
