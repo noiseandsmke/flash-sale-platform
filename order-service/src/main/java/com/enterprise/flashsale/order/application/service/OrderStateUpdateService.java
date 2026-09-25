@@ -8,19 +8,24 @@ import com.enterprise.flashsale.order.domain.event.OrderCancelledEvent;
 import com.enterprise.flashsale.order.domain.exception.OrderNotFoundException;
 import com.enterprise.flashsale.order.domain.model.Order;
 import com.enterprise.flashsale.order.domain.model.OrderId;
+import io.micrometer.core.instrument.MeterRegistry;
 
 import java.util.Objects;
 
 public class OrderStateUpdateService implements CompleteOrderUseCase, CancelOrderUseCase {
     private final OrderPersistencePort orderPersistencePort;
     private final OutboxPersistencePort outboxPersistencePort;
+    private final MeterRegistry meterRegistry;
 
     public OrderStateUpdateService(
-            OrderPersistencePort orderPersistencePort, OutboxPersistencePort outboxPersistencePort) {
+            OrderPersistencePort orderPersistencePort,
+            OutboxPersistencePort outboxPersistencePort,
+            MeterRegistry meterRegistry) {
         this.orderPersistencePort =
                 Objects.requireNonNull(orderPersistencePort, "OrderPersistencePort must not be null");
         this.outboxPersistencePort =
                 Objects.requireNonNull(outboxPersistencePort, "OutboxPersistencePort must not be null");
+        this.meterRegistry = meterRegistry;
     }
 
     @Override
@@ -36,5 +41,8 @@ public class OrderStateUpdateService implements CompleteOrderUseCase, CancelOrde
         OrderCancelledEvent cancelledEvent = order.cancel(reason);
         orderPersistencePort.save(order);
         outboxPersistencePort.saveOutboxEvent(cancelledEvent);
+        if (meterRegistry != null) {
+            meterRegistry.counter("flashsale.orders.total", "status", "CANCELLED").increment();
+        }
     }
 }

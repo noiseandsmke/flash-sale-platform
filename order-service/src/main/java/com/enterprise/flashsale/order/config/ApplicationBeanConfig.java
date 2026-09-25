@@ -13,6 +13,8 @@ import com.enterprise.flashsale.order.application.service.OrderStateUpdateServic
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.micrometer.core.instrument.MeterRegistry;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -33,9 +35,10 @@ public class ApplicationBeanConfig {
             OrderPersistencePort orderPersistencePort,
             OutboxPersistencePort outboxPersistencePort,
             ProcessedEventCheckPort processedEventCheckPort,
-            PlatformTransactionManager transactionManager) {
-        CreateOrderService coreService =
-                new CreateOrderService(orderPersistencePort, outboxPersistencePort, processedEventCheckPort);
+            PlatformTransactionManager transactionManager,
+            @Autowired(required = false) MeterRegistry meterRegistry) {
+        CreateOrderService coreService = new CreateOrderService(
+                orderPersistencePort, outboxPersistencePort, processedEventCheckPort, meterRegistry);
 
         TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
 
@@ -44,8 +47,10 @@ public class ApplicationBeanConfig {
 
     @Bean
     public OrderStateUpdateService orderStateUpdateService(
-            OrderPersistencePort orderPersistencePort, OutboxPersistencePort outboxPersistencePort) {
-        return new OrderStateUpdateService(orderPersistencePort, outboxPersistencePort);
+            OrderPersistencePort orderPersistencePort,
+            OutboxPersistencePort outboxPersistencePort,
+            @Autowired(required = false) MeterRegistry meterRegistry) {
+        return new OrderStateUpdateService(orderPersistencePort, outboxPersistencePort, meterRegistry);
     }
 
     @Bean

@@ -9,6 +9,8 @@ import com.enterprise.flashsale.payment.application.service.ProcessPaymentServic
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.micrometer.core.instrument.MeterRegistry;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -30,9 +32,14 @@ public class ApplicationBeanConfig {
             OutboxPersistencePort outboxPersistencePort,
             ProcessedEventCheckPort processedEventCheckPort,
             PaymentGatewayPort paymentGatewayPort,
-            PlatformTransactionManager transactionManager) {
+            PlatformTransactionManager transactionManager,
+            @Autowired(required = false) MeterRegistry meterRegistry) {
         ProcessPaymentService coreService = new ProcessPaymentService(
-                paymentPersistencePort, outboxPersistencePort, processedEventCheckPort, paymentGatewayPort);
+                paymentPersistencePort,
+                outboxPersistencePort,
+                processedEventCheckPort,
+                paymentGatewayPort,
+                meterRegistry);
 
         TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
         return command -> transactionTemplate.execute(status -> coreService.execute(command));

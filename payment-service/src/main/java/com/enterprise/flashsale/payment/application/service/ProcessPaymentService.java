@@ -10,6 +10,7 @@ import com.enterprise.flashsale.payment.application.port.out.ProcessedEventCheck
 import com.enterprise.flashsale.payment.domain.event.DomainEvent;
 import com.enterprise.flashsale.payment.domain.model.Payment;
 import com.enterprise.flashsale.payment.domain.model.PaymentId;
+import io.micrometer.core.instrument.MeterRegistry;
 
 import java.util.Objects;
 
@@ -18,12 +19,14 @@ public class ProcessPaymentService implements ProcessPaymentUseCase {
     private final OutboxPersistencePort outboxPersistencePort;
     private final ProcessedEventCheckPort processedEventCheckPort;
     private final PaymentGatewayPort paymentGatewayPort;
+    private final MeterRegistry meterRegistry;
 
     public ProcessPaymentService(
             PaymentPersistencePort paymentPersistencePort,
             OutboxPersistencePort outboxPersistencePort,
             ProcessedEventCheckPort processedEventCheckPort,
-            PaymentGatewayPort paymentGatewayPort) {
+            PaymentGatewayPort paymentGatewayPort,
+            MeterRegistry meterRegistry) {
         this.paymentPersistencePort =
                 Objects.requireNonNull(paymentPersistencePort, "PaymentPersistencePort must not be null");
         this.outboxPersistencePort =
@@ -31,6 +34,7 @@ public class ProcessPaymentService implements ProcessPaymentUseCase {
         this.processedEventCheckPort =
                 Objects.requireNonNull(processedEventCheckPort, "ProcessedEventCheckPort must not be null");
         this.paymentGatewayPort = Objects.requireNonNull(paymentGatewayPort, "PaymentGatewayPort must not be null");
+        this.meterRegistry = meterRegistry;
     }
 
     @Override
@@ -50,8 +54,14 @@ public class ProcessPaymentService implements ProcessPaymentUseCase {
         DomainEvent event;
         if (gatewayResult.isSuccessful()) {
             event = payment.markAsSuccess(gatewayResult.transactionReference());
+            if (meterRegistry != null) {
+                meterRegistry.counter("flashsale.payments.total", "status", "SUCCESS", "gateway", "stripe").increment();
+            }
         } else {
             event = payment.markAsFailed(gatewayResult.failureReason());
+            if (meterRegistry != null) {
+                meterRegistry.counter("flashsale.payments.total", "status", "FAILED", "gateway", "stripe").increment();
+            }
         }
 
         paymentPersistencePort.save(payment);

@@ -6,18 +6,18 @@ networks:
     driver: bridge
 
 volumes:
-  order_postgres_data:
-    name: flashsale-order-postgres-data
-    driver: local
-  payment_postgres_data:
-    name: flashsale-payment-postgres-data
-    driver: local
-  redis_data:
+  postgres-order-data:
+    name: flashsale-postgres-order-data
+  postgres-payment-data:
+    name: flashsale-postgres-payment-data
+  redis-data:
     name: flashsale-redis-data
-    driver: local
-  kafka_data:
+  kafka-data:
     name: flashsale-kafka-data
-    driver: local
+  prometheus-data:
+    name: flashsale-prometheus-data
+  grafana-data:
+    name: flashsale-grafana-data
 
 services:
   postgres-order:
@@ -33,7 +33,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - order_postgres_data:/var/lib/postgresql/data
+      - postgres-order-data:/var/lib/postgresql
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres_admin -d flashsale_order_db" ]
       interval: 5s
@@ -54,7 +54,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - payment_postgres_data:/var/lib/postgresql/data
+      - postgres-payment-data:/var/lib/postgresql
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres_admin -d flashsale_payment_db" ]
       interval: 5s
@@ -71,7 +71,7 @@ services:
       - "6379:6379"
     command: [ "redis-server", "--appendonly", "yes", "--requirepass", "redis_secure_password" ]
     volumes:
-      - redis_data:/data
+      - redis-data:/data
     healthcheck:
       test: [ "CMD", "redis-cli", "-a", "redis_secure_password", "ping" ]
       interval: 5s
@@ -100,7 +100,7 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
     volumes:
-      - kafka_data:/var/lib/kafka/data
+      - kafka-data:/var/lib/kafka/data
     tmpfs:
       - /etc/kafka/secrets
       - /mnt/shared/config
@@ -122,10 +122,10 @@ services:
     ports:
       - "8888:8888"
     environment:
-      CONFIG_GIT_URI: ${CONFIG_GIT_URI:-https://github.com/noiseandsmke/flash-sale-config.git}
-      CONFIG_GIT_DEFAULT_LABEL: ${CONFIG_GIT_DEFAULT_LABEL:-main}
-      CONFIG_GIT_USERNAME: ${CONFIG_GIT_USERNAME:-}
-      CONFIG_GIT_PASSWORD: ${CONFIG_GIT_PASSWORD:-}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-native}
+      CONFIG_SEARCH_LOCATIONS: file:/config-repo
+    volumes:
+      - ./config-repo:/config-repo:ro
     healthcheck:
       test: [ "CMD-SHELL", "wget -qO- http://localhost:8888/actuator/health | grep UP || exit 1" ]
       interval: 5s
@@ -224,4 +224,39 @@ services:
       timeout: 3s
       retries: 5
       start_period: 15s
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: flashsale-prometheus
+    networks:
+      - flashsale-network
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: flashsale-grafana
+    networks:
+      - flashsale-network
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
     restart: unless-stopped

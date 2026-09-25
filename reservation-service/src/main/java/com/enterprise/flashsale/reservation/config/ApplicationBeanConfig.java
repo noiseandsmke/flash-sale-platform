@@ -7,6 +7,8 @@ import com.enterprise.flashsale.reservation.application.service.ReserveTicketSer
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.micrometer.core.instrument.MeterRegistry;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -22,7 +24,9 @@ public class ApplicationBeanConfig {
 
     @Bean
     public ReserveTicketUseCase reserveTicketUseCase(
-            TicketInventoryPort ticketInventoryPort, TicketEventPublisherPort ticketEventPublisherPort) {
-        return new ReserveTicketService(ticketInventoryPort, ticketEventPublisherPort);
+            TicketInventoryPort ticketInventoryPort,
+            TicketEventPublisherPort ticketEventPublisherPort,
+            @Autowired(required = false) MeterRegistry meterRegistry) {
+        return new ReserveTicketService(ticketInventoryPort, ticketEventPublisherPort, meterRegistry);
     }
 }

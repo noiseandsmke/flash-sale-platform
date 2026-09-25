@@ -9,6 +9,7 @@ import com.enterprise.flashsale.reservation.domain.model.Money;
 import com.enterprise.flashsale.reservation.domain.model.Ticket;
 import com.enterprise.flashsale.reservation.domain.model.TicketId;
 import com.enterprise.flashsale.reservation.domain.model.TicketStatus;
+import io.micrometer.core.instrument.MeterRegistry;
 
 import java.time.Duration;
 import java.util.Objects;
@@ -19,12 +20,16 @@ public class ReserveTicketService implements ReserveTicketUseCase {
 
     private final TicketInventoryPort ticketInventoryPort;
     private final TicketEventPublisherPort ticketEventPublisherPort;
+    private final MeterRegistry meterRegistry;
 
     public ReserveTicketService(
-            TicketInventoryPort ticketInventoryPort, TicketEventPublisherPort ticketEventPublisherPort) {
+            TicketInventoryPort ticketInventoryPort,
+            TicketEventPublisherPort ticketEventPublisherPort,
+            MeterRegistry meterRegistry) {
         this.ticketInventoryPort = Objects.requireNonNull(ticketInventoryPort, "TicketInventoryPort must not be null");
         this.ticketEventPublisherPort =
                 Objects.requireNonNull(ticketEventPublisherPort, "TicketEventPublisherPort must not be null");
+        this.meterRegistry = meterRegistry;
     }
 
     @Override
@@ -35,6 +40,9 @@ public class ReserveTicketService implements ReserveTicketUseCase {
                 command.eventId(), ticketId, command.userId(), RESERVATION_TTL_SECONDS);
 
         if (!isStockReserved) {
+            if (meterRegistry != null) {
+                meterRegistry.counter("flashsale.reservations.total", "status", "SOLD_OUT").increment();
+            }
             return false;
         }
 
@@ -45,8 +53,14 @@ public class ReserveTicketService implements ReserveTicketUseCase {
 
         try {
             ticketEventPublisherPort.publish(reservationEvent);
+            if (meterRegistry != null) {
+                meterRegistry.counter("flashsale.reservations.total", "status", "SUCCESS").increment();
+            }
         } catch (Exception e) {
             ticketInventoryPort.releaseStock(ticketId, command.userId());
+            if (meterRegistry != null) {
+                meterRegistry.counter("flashsale.reservations.total", "status", "FAILED").increment();
+            }
             throw new IllegalStateException("Failed to publish reservation event; stock reservation rolled back", e);
         }
 
