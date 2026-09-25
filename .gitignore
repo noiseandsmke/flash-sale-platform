@@ -40,7 +40,8 @@ build/
 ### IntelliJ IDEA ###
 .idea/
 .mvn/
-.scripts
+.scripts/
+tests
 config-repo
 *.iml
 *.iws
