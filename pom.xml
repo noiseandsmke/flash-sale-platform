@@ -16,8 +16,8 @@
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>Flash Sale Platform</name>
-    <description>Enterprise distributed flash sale platform built with event-driven architecture</description>
+    <name>Distributed Flash Sale &amp; High-Concurrency Ticketing Platform</name>
+    <description>Enterprise distributed flash sale &amp; high-concurrency ticketing platform built with event-driven architecture</description>
 
     <modules>
         <module>config-server</module>
